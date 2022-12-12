@@ -42,7 +42,7 @@ def process(line, is_aggresive=False):
     unchanged_pairs = set()
     
     row = json.loads(re.sub(r'[\x00-\x1F]+', '', line))
-    extract_lang=pycountry.languages.get(name="English")
+    extract_lang=pycountry.languages.get(name="Japanese")
     if row[2] == extract_lang.name:
         for i in range(len(row[4])):
             src_sent = row[4][i].strip() # remove '"'
@@ -67,9 +67,7 @@ def process(line, is_aggresive=False):
                 if not tgt_sent:
                     # if it becomes empty after removing tags
                     continue
-                # Remove when I add language selector
-                if not is_aggresive or is_capitalized_sentence(tgt_sent):
-                    edited_pairs.add((src_sent, tgt_sent))
+                edited_pairs.add((src_sent, tgt_sent))
     return edited_pairs, unchanged_pairs
 
 
