@@ -17,8 +17,8 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 
-# downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
-lid_model=fasttext.load_model("./lid.176.bin")
+# downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
+lid_model=fasttext.load_model("./lid.176.ftz")
 
 sline_pattern = re.compile(r'\[sline\].*?\[/sline\]')
 color_tags = ['[f-blue]','[/f-blue]','[f-red]','[/f-red]','[f-bold]','[/f-bold]']
@@ -45,22 +45,22 @@ def process(line, is_aggresive=False):
     extract_lang=pycountry.languages.get(name="English")
     if row[2] == extract_lang.name:
         for i in range(len(row[4])):
-            src_sent = row[4][i].strip()
-            src_lang = lid_model.predict(src_sent)
+            src_sent = row[4][i].strip() # remove '"'
+            src_sent = re.sub('\s+|\n', ' ', src_sent)
+            src_lang = lid_model.predict(src_sent)[0][0].removeprefix('__label__')
             if src_lang != extract_lang.alpha_2:
                 continue
-            src_sent = re.sub('\s+', ' ', src_sent)
             if len(row[5][i]) == 0: # no edits
                 unchanged_pairs.add((src_sent, src_sent))
             for tgt_sent in row[5][i]:
                 if not tgt_sent:
                     continue
                 tgt_sent = tgt_sent.strip()
-                tgt_sent = re.sub('\s+', ' ', tgt_sent)
+                tgt_sent = re.sub('\s+|\n', ' ', tgt_sent)
                 if tgt_sent == src_sent:
                     unchanged_pairs.add((src_sent, src_sent))
                     continue
-                tgt_lang = lid_model.predict(tgt_sent)
+                tgt_lang = lid_model.predict(tgt_sent)[0][0].removeprefix('__label__')
                 if tgt_lang != extract_lang.alpha_2:
                     continue
                 tgt_sent = remove_tags(tgt_sent).strip()
@@ -80,7 +80,7 @@ def parallelize_preprocess(func, iterator, processes):
     iterator = tqdm(iterator)
     if processes <= 1:
         return map(func, iterator)
-    return Parallel(n_jobs=processes)(delayed(func)(line) for line in iterator)
+    return Parallel(n_jobs=processes, backend='threading')(delayed(func)(line) for line in iterator)
 
 
 if __name__ == '__main__':
