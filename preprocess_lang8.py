@@ -17,6 +17,9 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 
+# downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+lid_model=fasttext.load_model("./lid.176.bin")
+
 sline_pattern = re.compile(r'\[sline\].*?\[/sline\]')
 color_tags = ['[f-blue]','[/f-blue]','[f-red]','[/f-red]','[f-bold]','[/f-bold]']
 sent_end = ['.','?','!','"',"'"]
@@ -37,11 +40,6 @@ def is_capitalized_sentence(line):
 def process(line, is_aggresive=False):
     edited_pairs = set()
     unchanged_pairs = set()
-    #TODO: check the max length of row[4]
-    # lang_identifier = NNetLanguageIdentifier(min_num_bytes=0, min_num_bytes=20480)
-    
-    # downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
-    lid_model=fasttext.load_model("./lid.176.bin")
     
     row = json.loads(re.sub(r'[\x00-\x1F]+', '', line))
     extract_lang=pycountry.languages.get(name="English")
@@ -69,6 +67,7 @@ def process(line, is_aggresive=False):
                 if not tgt_sent:
                     # if it becomes empty after removing tags
                     continue
+                # Remove when I add language selector
                 if not is_aggresive or is_capitalized_sentence(tgt_sent):
                     edited_pairs.add((src_sent, tgt_sent))
     return edited_pairs, unchanged_pairs
