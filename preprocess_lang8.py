@@ -17,8 +17,8 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 
-# downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
-lid_model=fasttext.load_model("./lid.176.ftz")
+# downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+lid_model=fasttext.load_model("./lid.176.bin")
 
 sline_pattern = re.compile(r'\[sline\].*?\[/sline\]')
 color_tags = ['[f-blue]','[/f-blue]','[f-red]','[/f-red]','[f-bold]','[/f-bold]']
