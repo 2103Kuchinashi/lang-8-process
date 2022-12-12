@@ -8,7 +8,9 @@ Preprocessing script for Lang-8 v2 data. This script will:
 
 import argparse
 import json
-import langid
+# from gcld3 import NNetLanguageIdentifier
+import fasttext
+import pycountry
 import re
 from functools import partial
 from joblib import Parallel, delayed
@@ -35,12 +37,19 @@ def is_capitalized_sentence(line):
 def process(line, is_aggresive=False):
     edited_pairs = set()
     unchanged_pairs = set()
+    #TODO: check the max length of row[4]
+    # lang_identifier = NNetLanguageIdentifier(min_num_bytes=0, min_num_bytes=20480)
+    
+    # downloaded from https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin
+    lid_model=fasttext.load_model("./lid.176.bin")
+    
     row = json.loads(re.sub(r'[\x00-\x1F]+', '', line))
-    if row[2] == 'English':
+    extract_lang=pycountry.languages.get(name="English")
+    if row[2] == extract_lang.name:
         for i in range(len(row[4])):
             src_sent = row[4][i].strip()
-            src_lang, _ = langid.classify(src_sent)
-            if src_lang != 'en':
+            src_lang = lid_model.predict(src_sent)
+            if src_lang != extract_lang.alpha_2:
                 continue
             src_sent = re.sub('\s+', ' ', src_sent)
             if len(row[5][i]) == 0: # no edits
@@ -53,8 +62,8 @@ def process(line, is_aggresive=False):
                 if tgt_sent == src_sent:
                     unchanged_pairs.add((src_sent, src_sent))
                     continue
-                tgt_lang, _ = langid.classify(tgt_sent)
-                if tgt_lang != 'en':
+                tgt_lang = lid_model.predict(tgt_sent)
+                if tgt_lang != extract_lang.alpha_2:
                     continue
                 tgt_sent = remove_tags(tgt_sent).strip()
                 if not tgt_sent:
