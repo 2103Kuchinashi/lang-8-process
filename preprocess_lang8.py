@@ -33,17 +33,14 @@ def remove_tags(line):
     return re.sub('\s+', ' ', line)
 
 
-def is_capitalized_sentence(line):
-    return line[0] == line[0].upper() and line[-1] in sent_end
-
-
-def process(line, is_aggresive=False):
+def process(line, language, is_strict=False):
     edited_pairs = set()
     unchanged_pairs = set()
     
     row = json.loads(re.sub(r'[\x00-\x1F]+', '', line))
-    extract_lang=pycountry.languages.get(name="English")
-    if row[2] == extract_lang.name:
+    extract_lang=pycountry.languages.get(name=language)
+    # if (is_strict and row[2] == extract_lang.name) or (not is_strict and extract_lang.name in row[2]):
+    if row[2] == extract_lang.name if is_strict else extract_lang.name in row[2]:
         for i in range(len(row[4])):
             src_sent = row[4][i].strip() # remove '"'
             src_sent = re.sub('\s+|\n', ' ', src_sent)
@@ -67,9 +64,7 @@ def process(line, is_aggresive=False):
                 if not tgt_sent:
                     # if it becomes empty after removing tags
                     continue
-                # Remove when I add language selector
-                if not is_aggresive or is_capitalized_sentence(tgt_sent):
-                    edited_pairs.add((src_sent, tgt_sent))
+                edited_pairs.add((src_sent, tgt_sent))
     return edited_pairs, unchanged_pairs
 
 
@@ -89,14 +84,15 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", required=True, help="Edited file prefix")
     parser.add_argument("-k", "--keep", required=True, help="Unchanged file prefix")
     parser.add_argument("-j", "--jobs", type=int, required=False, default=1, help="Number of parallel jobs")
-    parser.add_argument("--aggresive", action="store_true", help="Aggresive filtering")
+    parser.add_argument("-l", "--language", required=True, help="The language to be extracted")
+    parser.add_argument("--strict", action="store_true", help="Strict language identification")
     args = parser.parse_args()
 
     with open(args.data) as fin, \
          open(args.output, 'w') as fout, \
          open(args.keep, 'w') as fkeep:
 
-        process_func = partial(process, is_aggresive=args.aggresive)
+        process_func = partial(process, language=args.language, is_strict=args.strict)
 
         for edited_pairs, unchanged_pairs in parallelize_preprocess(
             process_func, fin.readlines(), args.jobs
